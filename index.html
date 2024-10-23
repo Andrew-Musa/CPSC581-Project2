@@ -84,28 +84,54 @@
         orientationDiv.id = 'orientationValues';
         document.body.appendChild(orientationDiv);
 
-        // Initialize smoothed values
+        // Initialize smoothed values and previous alpha
         let smoothedAlpha = 0;
         let smoothedBeta = 0;
+        let prevAlpha = null;
+        let accumulatedAlpha = 0;
+
+        // Function to handle angle wrapping
+        function getShortestRotation(from, to) {
+            const diff = ((to - from + 180) % 360) - 180;
+            return diff < -180 ? diff + 360 : diff;
+        }
 
         // Handle device orientation
         const onDeviceOrientation = (event) => {
             const { alpha, beta } = event;
 
+            // Handle alpha wraparound
+            if (prevAlpha !== null) {
+                const alphaDiff = getShortestRotation(prevAlpha, alpha);
+                accumulatedAlpha += alphaDiff;
+            } else {
+                accumulatedAlpha = alpha;
+            }
+            prevAlpha = alpha;
+
             // Update smoothed values towards the new values
-            smoothedAlpha = THREE.MathUtils.lerp(smoothedAlpha, alpha, 0.1);
+            smoothedAlpha = THREE.MathUtils.lerp(smoothedAlpha, accumulatedAlpha, 0.1);
             smoothedBeta = THREE.MathUtils.lerp(smoothedBeta, beta, 0.1);
 
-            // Adjust camera rotation: subtract 90 from beta to align straight view with beta=90
-            camera.rotation.set(
-                THREE.MathUtils.degToRad(smoothedBeta - 90),  // pitch (up/down)
-                THREE.MathUtils.degToRad(smoothedAlpha - 90), // yaw (left/right)
-                0                                             // roll (not used)
-            );
+            // Convert angles to radians
+            const alphaRad = THREE.MathUtils.degToRad(smoothedAlpha - 90);
+            const betaRad = THREE.MathUtils.degToRad(smoothedBeta - 90);
+
+            // Create rotation quaternion for yaw (alpha)
+            const quaternionYaw = new THREE.Quaternion();
+            quaternionYaw.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -alphaRad);
+
+            // Create rotation quaternion for pitch (beta)
+            const quaternionPitch = new THREE.Quaternion();
+            quaternionPitch.setFromAxisAngle(new THREE.Vector3(1, 0, 0), betaRad);
+
+            // Combine rotations: first yaw, then pitch
+            camera.quaternion.copy(quaternionYaw).multiply(quaternionPitch);
 
             // Update the displayed values
             orientationDiv.innerHTML = `
-                Alpha: ${Math.round(smoothedAlpha)}<br>
+                Alpha: ${Math.round(alpha)}<br>
+                Smoothed Alpha: ${Math.round(smoothedAlpha % 360)}<br>
                 Beta: ${Math.round(smoothedBeta)}<br>
             `;
         };
