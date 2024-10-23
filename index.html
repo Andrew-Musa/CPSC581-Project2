@@ -90,17 +90,17 @@
 
         // Handle device orientation
         const onDeviceOrientation = (event) => {
-            const { alpha, beta } = event; // Use alpha and beta
+            const { alpha, beta } = event;
 
-            // Update smoothed values towards the new values in 10 degree increments
+            // Update smoothed values towards the new values
             smoothedAlpha = THREE.MathUtils.lerp(smoothedAlpha, alpha, 0.1);
             smoothedBeta = THREE.MathUtils.lerp(smoothedBeta, beta, 0.1);
 
-            // Adjust camera rotation: rotate yaw by -90 degrees to align with compass
+            // Adjust camera rotation: subtract 90 from beta to align straight view with beta=90
             camera.rotation.set(
-                THREE.MathUtils.degToRad(smoothedBeta),  // pitch (up/down)
+                THREE.MathUtils.degToRad(smoothedBeta - 90),  // pitch (up/down)
                 THREE.MathUtils.degToRad(smoothedAlpha - 90), // yaw (left/right)
-                0                                         // roll (not used)
+                0                                             // roll (not used)
             );
 
             // Update the displayed values
