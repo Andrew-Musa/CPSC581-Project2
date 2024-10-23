@@ -1,16 +1,84 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Cool Unlock</title>
-        <link rel="stylesheet" href="styles.css">
-        <script src="libraries/p5.min.js"></script>
-        <script src="sketch.js"></script>
-    </head>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D World</title>
+    <style>
+        body { margin: 0; }
+        canvas { display: block; }
+    </style>
+    <script type="module">
+        import * as THREE from 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/build/three.module.js';
+        import { PointerLockControls } from 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/jsm/controls/PointerLockControls.js';
 
-    <body>
-        <!-- <div id="overlay"></div> -->
-        <!-- <script src="back-end.js"></script> -->
-    </body>
+        // Scene, Camera, Renderer
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xffffff); // Set background to white
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Ground
+        const groundGeometry = new THREE.PlaneGeometry(100, 100);
+        const groundMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 }); // Green color
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2; // Rotate to make it horizontal
+        ground.position.y = -0.1; // Slightly below the camera
+        scene.add(ground);
+
+        // User's height (1.8 meters)
+        const userHeight = 1.8;
+        camera.position.set(0, userHeight / 2, 5); // Position the camera to represent the user's eye level
+
+        // Small blue cube
+        const cubeSize = 0.5; // Size of the cube
+        const cubeGeometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
+        const cubeMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff }); // Blue color
+        const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+        cube.position.set(0, cubeSize / 2, 3); // Position it in front of the user
+        scene.add(cube);
+        const cube0 = new THREE.Mesh(cubeGeometry, cubeMaterial);
+        cube0.position.set(-2, cubeSize / 2, 5); // Position it in left of the user
+        scene.add(cube0);
+        const cube1 = new THREE.Mesh(cubeGeometry, cubeMaterial);
+        cube1.position.set(0, cubeSize / 2, 7); // Position it in back of the user
+        scene.add(cube1);
+        const cube2 = new THREE.Mesh(cubeGeometry, cubeMaterial);
+        cube2.position.set(2, cubeSize / 2, 5); // Position it in right of the user
+        scene.add(cube2);
+
+        // Controls
+        const controls = new PointerLockControls(camera, document.body);
+        scene.add(controls.getObject());
+
+        // Event listener to enable pointer lock on click
+        document.body.addEventListener('click', () => {
+            controls.lock();
+        });
+
+        // Lighting
+        const light = new THREE.HemisphereLight(0xffffff, 0x444444);
+        light.position.set(0, 200, 0);
+        scene.add(light);
+
+        // Resize handling
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Animation loop
+        const animate = function () {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        };
+
+        animate();
+    </script>
+</head>
+<body>
+</body>
 </html>
