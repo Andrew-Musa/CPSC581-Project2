@@ -119,7 +119,7 @@
 
             // Create rotation quaternion for yaw (alpha)
             const quaternionYaw = new THREE.Quaternion();
-            quaternionYaw.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -alphaRad);
+            quaternionYaw.setFromAxisAngle(new THREE.Vector3(0, 1, 0), alphaRad); // Removed the negative sign here
 
             // Create rotation quaternion for pitch (beta)
             const quaternionPitch = new THREE.Quaternion();
