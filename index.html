@@ -16,7 +16,7 @@
             background: rgba(255, 255, 255, 0.7);
             padding: 10px;
             border-radius: 5px;
-            pointer-events: none; /* Prevent the overlay from blocking interactions */
+            pointer-events: none;
         }
     </style>
     <script type="module">
@@ -25,7 +25,7 @@
 
         // Scene, Camera, Renderer
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xffffff); // Set background to white
+        scene.background = new THREE.Color(0xffffff);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer();
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -33,29 +33,29 @@
 
         // Ground
         const groundGeometry = new THREE.PlaneGeometry(100, 100);
-        const groundMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 }); // Green color
+        const groundMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
         const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-        ground.rotation.x = -Math.PI / 2; // Rotate to make it horizontal
-        ground.position.y = -0.1; // Slightly below the camera
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -0.1;
         scene.add(ground);
 
         // User's height (1.8 meters)
         const userHeight = 1.8;
-        camera.position.set(0, userHeight / 2, 5); // Position the camera to represent the user's eye level
+        camera.position.set(0, userHeight / 2, 5);
 
         // Small blue cubes
-        const cubeSize = 0.5; // Size of the cube
-        const cubeMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff }); // Blue color
+        const cubeSize = 0.5;
+        const cubeMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
         const cubes = [
-            new THREE.Mesh(new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize), cubeMaterial),
-            new THREE.Mesh(new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize), cubeMaterial),
-            new THREE.Mesh(new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize), cubeMaterial),
-            new THREE.Mesh(new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize), cubeMaterial)
+            new THREE.Mesh(new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize), cubeMaterial), // North
+            new THREE.Mesh(new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize), cubeMaterial), // West
+            new THREE.Mesh(new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize), cubeMaterial), // South
+            new THREE.Mesh(new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize), cubeMaterial)  // East
         ];
-        cubes[0].position.set(0, cubeSize / 2, 3); // Front
-        cubes[1].position.set(-2, cubeSize / 2, 5); // Left
-        cubes[2].position.set(0, cubeSize / 2, 7); // Back
-        cubes[3].position.set(2, cubeSize / 2, 5); // Right
+        cubes[0].position.set(0, cubeSize / 2, 3);   // North
+        cubes[1].position.set(-2, cubeSize / 2, 5);  // West
+        cubes[2].position.set(0, cubeSize / 2, 7);   // South
+        cubes[3].position.set(2, cubeSize / 2, 5);   // East
         cubes.forEach(cube => scene.add(cube));
 
         // Controls
@@ -90,18 +90,16 @@
 
         // Handle device orientation
         const onDeviceOrientation = (event) => {
-            const { alpha, beta, gamma } = event; // Use alpha, beta, and gamma
+            const { alpha, beta } = event; // Use alpha and beta
 
             // Update smoothed values towards the new values in 10 degree increments
-            const step = 10; // Degrees
-
             smoothedAlpha = THREE.MathUtils.lerp(smoothedAlpha, alpha, 0.1);
             smoothedBeta = THREE.MathUtils.lerp(smoothedBeta, beta, 0.1);
 
-            // Set camera rotation
+            // Adjust camera rotation: rotate yaw by -90 degrees to align with compass
             camera.rotation.set(
                 THREE.MathUtils.degToRad(smoothedBeta),  // pitch (up/down)
-                THREE.MathUtils.degToRad(smoothedAlpha), // yaw (left/right)
+                THREE.MathUtils.degToRad(smoothedAlpha - 90), // yaw (left/right)
                 0                                         // roll (not used)
             );
 
@@ -109,7 +107,6 @@
             orientationDiv.innerHTML = `
                 Alpha: ${Math.round(smoothedAlpha)}<br>
                 Beta: ${Math.round(smoothedBeta)}<br>
-                Gamma: ${Math.round(gamma)} 
             `;
         };
 
