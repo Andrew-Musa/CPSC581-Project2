@@ -7,6 +7,17 @@
     <style>
         body { margin: 0; }
         canvas { display: block; }
+        #orientationValues {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: black;
+            font-size: 20px;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            pointer-events: none; /* Prevent the overlay from blocking interactions */
+        }
     </style>
     <script type="module">
         import * as THREE from 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/build/three.module.js';
@@ -32,22 +43,20 @@
         const userHeight = 1.8;
         camera.position.set(0, userHeight / 2, 5); // Position the camera to represent the user's eye level
 
-        // Small blue cube
+        // Small blue cubes
         const cubeSize = 0.5; // Size of the cube
-        const cubeGeometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
         const cubeMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff }); // Blue color
-        const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-        cube.position.set(0, cubeSize / 2, 3); // Position it in front of the user
-        scene.add(cube);
-        const cube0 = new THREE.Mesh(cubeGeometry, cubeMaterial);
-        cube0.position.set(-2, cubeSize / 2, 5); // Position it in left of the user
-        scene.add(cube0);
-        const cube1 = new THREE.Mesh(cubeGeometry, cubeMaterial);
-        cube1.position.set(0, cubeSize / 2, 7); // Position it in back of the user
-        scene.add(cube1);
-        const cube2 = new THREE.Mesh(cubeGeometry, cubeMaterial);
-        cube2.position.set(2, cubeSize / 2, 5); // Position it in right of the user
-        scene.add(cube2);
+        const cubes = [
+            new THREE.Mesh(new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize), cubeMaterial),
+            new THREE.Mesh(new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize), cubeMaterial),
+            new THREE.Mesh(new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize), cubeMaterial),
+            new THREE.Mesh(new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize), cubeMaterial)
+        ];
+        cubes[0].position.set(0, cubeSize / 2, 3); // Front
+        cubes[1].position.set(-2, cubeSize / 2, 5); // Left
+        cubes[2].position.set(0, cubeSize / 2, 7); // Back
+        cubes[3].position.set(2, cubeSize / 2, 5); // Right
+        cubes.forEach(cube => scene.add(cube));
 
         // Controls
         const controls = new PointerLockControls(camera, document.body);
@@ -69,6 +78,43 @@
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
+
+        // Create a div to display orientation values
+        const orientationDiv = document.createElement('div');
+        orientationDiv.id = 'orientationValues';
+        document.body.appendChild(orientationDiv);
+
+        // Initialize smoothed values
+        let smoothedAlpha = 0;
+        let smoothedBeta = 0;
+
+        // Handle device orientation
+        const onDeviceOrientation = (event) => {
+            const { alpha, beta, gamma } = event; // Use alpha, beta, and gamma
+
+            // Update smoothed values towards the new values in 10 degree increments
+            const step = 10; // Degrees
+
+            smoothedAlpha = THREE.MathUtils.lerp(smoothedAlpha, alpha, 0.1);
+            smoothedBeta = THREE.MathUtils.lerp(smoothedBeta, beta, 0.1);
+
+            // Set camera rotation
+            camera.rotation.set(
+                THREE.MathUtils.degToRad(smoothedBeta),  // pitch (up/down)
+                THREE.MathUtils.degToRad(smoothedAlpha), // yaw (left/right)
+                0                                         // roll (not used)
+            );
+
+            // Update the displayed values
+            orientationDiv.innerHTML = `
+                Alpha: ${Math.round(smoothedAlpha)}<br>
+                Beta: ${Math.round(smoothedBeta)}<br>
+                Gamma: ${Math.round(gamma)} 
+            `;
+        };
+
+        // Event listener for device orientation
+        window.addEventListener('deviceorientation', onDeviceOrientation, true);
 
         // Animation loop
         const animate = function () {
