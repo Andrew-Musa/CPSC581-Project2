@@ -22,6 +22,8 @@
     <script type="module">
         import * as THREE from 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/build/three.module.js';
         import { PointerLockControls } from 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/jsm/controls/PointerLockControls.js';
+        import { OBJLoader } from 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/jsm/loaders/OBJLoader.js';
+        import { TextureLoader } from 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/src/loaders/TextureLoader.js';
 
         // Scene, Camera, Renderer
         const scene = new THREE.Scene();
@@ -43,20 +45,31 @@
         const userHeight = 1.8;
         camera.position.set(0, userHeight / 2, 5);
 
-        // Small blue cubes
-        const cubeSize = 0.5;
-        const cubeMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
-        const cubes = [
-            new THREE.Mesh(new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize), cubeMaterial), // North
-            new THREE.Mesh(new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize), cubeMaterial), // West
-            new THREE.Mesh(new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize), cubeMaterial), // South
-            new THREE.Mesh(new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize), cubeMaterial)  // East
+        // Load cat models with textures
+        const loader = new OBJLoader();
+        const textureLoader = new TextureLoader();
+        const cats = [
+            { model: 'assets/3d/collarcat.obj', texture: 'assets/3d/collarcat.png', position: [0, 0.1, 3] },
+            { model: 'assets/3d/fishcat.obj', texture: 'assets/3d/fishcat.png', position: [-2, 0.1, 5] },
+            { model: 'assets/3d/orangecat.obj', texture: 'assets/3d/orangecat.png', position: [0, 0.1, 7] },
+            { model: 'assets/3d/siamesecat.obj', texture: 'assets/3d/siamesecat.png', position: [2, 0.1, 5] }
         ];
-        cubes[0].position.set(0, cubeSize / 2, 3);   // North
-        cubes[1].position.set(-2, cubeSize / 2, 5);  // West
-        cubes[2].position.set(0, cubeSize / 2, 7);   // South
-        cubes[3].position.set(2, cubeSize / 2, 5);   // East
-        cubes.forEach(cube => scene.add(cube));
+
+        cats.forEach(cat => {
+            const texture = textureLoader.load(cat.texture, () => {
+                loader.load(cat.model, (object) => {
+                    object.traverse((child) => {
+                        if (child.isMesh) {
+                            child.material.map = texture; // Apply the texture
+                            child.material.needsUpdate = true; // Update material
+                        }
+                    });
+                    object.position.set(...cat.position);
+                    object.scale.set(1, 1, 1); // Adjust size if needed
+                    scene.add(object);
+                });
+            });
+        });
 
         // Controls
         const controls = new PointerLockControls(camera, document.body);
@@ -119,7 +132,7 @@
 
             // Create rotation quaternion for yaw (alpha)
             const quaternionYaw = new THREE.Quaternion();
-            quaternionYaw.setFromAxisAngle(new THREE.Vector3(0, 1, 0), alphaRad); // Removed the negative sign here
+            quaternionYaw.setFromAxisAngle(new THREE.Vector3(0, 1, 0), alphaRad);
 
             // Create rotation quaternion for pitch (beta)
             const quaternionPitch = new THREE.Quaternion();
