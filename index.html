@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D World</title>
+    <title>Cool Unlock</title>
     <style>
         body { margin: 0; }
         canvas { display: block; }
@@ -105,6 +105,16 @@
                 });
             });
         });
+
+        // Create sky dome
+        const skyTexture = textureLoader.load('assets/3d/sky.jpg'); // Path to your sky texture
+        const skyMaterial = new THREE.MeshBasicMaterial({
+            map: skyTexture,
+            side: THREE.BackSide // Render the inside of the sphere
+        });
+        const skyGeometry = new THREE.SphereGeometry(500, 32, 32); // Large sphere
+        const skyDome = new THREE.Mesh(skyGeometry, skyMaterial);
+        scene.add(skyDome);
 
         // Controls
         const controls = new PointerLockControls(camera, document.body);
