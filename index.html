@@ -37,9 +37,17 @@
         const raycaster = new THREE.Raycaster();
         const pointer = new THREE.Vector2();
 
-        // Ground
+        // Ground with grass texture
         const groundGeometry = new THREE.PlaneGeometry(100, 100);
-        const groundMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+        const textureLoader = new THREE.TextureLoader();
+        const grassTexture = textureLoader.load('assets/3d/grass.jpg');
+
+        // Configure the grass texture
+        grassTexture.wrapS = THREE.RepeatWrapping;
+        grassTexture.wrapT = THREE.RepeatWrapping;
+        grassTexture.repeat.set(10, 10); // Adjust tiling
+
+        const groundMaterial = new THREE.MeshStandardMaterial({ map: grassTexture });
         const ground = new THREE.Mesh(groundGeometry, groundMaterial);
         ground.rotation.x = -Math.PI / 2;
         ground.position.y = -0.1;
@@ -54,7 +62,6 @@
 
         // Load cat models with textures
         const loader = new OBJLoader();
-        const textureLoader = new TextureLoader();
         const cats = [
             { model: 'assets/3d/collarcat.obj', texture: 'assets/3d/collarcat.png', position: [0, 0.5, 4] },
             { model: 'assets/3d/fishcat.obj', texture: 'assets/3d/fishcat.png', position: [-1, 0.5, 5] },
@@ -110,25 +117,20 @@
 
         // Handle touch/click events
         function onPointerDown(event) {
-            // Convert touch coordinates to normalized device coordinates
             pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
             pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
-            // Update the raycaster
             raycaster.setFromCamera(pointer, camera);
 
-            // Check for intersections with cat objects
             const intersects = raycaster.intersectObjects(catObjects, true);
 
             if (intersects.length > 0) {
-                // Find the parent object (the cat)
                 let catObject = intersects[0].object;
                 while (catObject.parent && !catObjects.includes(catObject)) {
                     catObject = catObject.parent;
                 }
 
                 if (catObjects.includes(catObject) && !catObject.userData.isJumping) {
-                    // Start jump animation
                     catObject.userData.isJumping = true;
                     catObject.userData.jumpStartTime = Date.now();
                 }
@@ -145,11 +147,9 @@
                     const progress = elapsed / jumpDuration;
 
                     if (progress >= 1) {
-                        // Reset cat position and jump state
                         cat.position.y = cat.userData.initialY;
                         cat.userData.isJumping = false;
                     } else {
-                        // Parabolic jump motion
                         const jumpProgress = Math.sin(progress * Math.PI);
                         cat.position.y = cat.userData.initialY + jumpHeight * jumpProgress;
                     }
@@ -170,7 +170,6 @@
         orientationDiv.id = 'orientationValues';
         document.body.appendChild(orientationDiv);
 
-        // Initialize smoothed values and previous alpha
         let smoothedAlpha = 0;
         let smoothedBeta = 0;
         let prevAlpha = null;
