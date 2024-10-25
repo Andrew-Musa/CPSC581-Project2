@@ -72,17 +72,29 @@
         const radius = 1; // radius of the circle
         const cats = [];
 
+        // Define the cat types and their corresponding assets
+        const catTypes = [
+            { model: 'assets/3d/fishcat.obj', texture: 'assets/3d/fishcat.png' },
+            { model: 'assets/3d/collarcat.obj', texture: 'assets/3d/collarcat.png' },
+            { model: 'assets/3d/orangecat.obj', texture: 'assets/3d/orangecat.png' },
+            { model: 'assets/3d/siamesecat.obj', texture: 'assets/3d/siamesecat.png' },
+        ];
+
         for (let i = 0; i < numCats; i++) {
             const angle = (i / numCats) * Math.PI * 2; // Calculate the angle for each cat
             const x = radius * Math.cos(angle); // Calculate x position
             const z = 5 + radius * Math.sin(angle); // Calculate z position (adding 5 to center at (0, 5))
 
+            // Select a cat type based on the current index
+            const catType = catTypes[i % catTypes.length];
+
             cats.push({
-                model: 'assets/3d/fishcat.obj',
-                texture: 'assets/3d/fishcat.png',
+                model: catType.model,
+                texture: catType.texture,
                 position: [x, 0.5, z]
             });
         }
+
 
         // Animation parameters
         const jumpHeight = 0.5;
