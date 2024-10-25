@@ -25,7 +25,6 @@
         import { OBJLoader } from 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/jsm/loaders/OBJLoader.js';
         import { TextureLoader } from 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/src/loaders/TextureLoader.js';
 
-        // Scene, Camera, Renderer
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0xffffff);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -33,19 +32,15 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // Raycaster for touch detection
         const raycaster = new THREE.Raycaster();
         const pointer = new THREE.Vector2();
 
-        // Ground with grass texture
         const groundGeometry = new THREE.PlaneGeometry(100, 100);
         const textureLoader = new THREE.TextureLoader();
         const grassTexture = textureLoader.load('assets/3d/grass.jpg');
-
-        // Configure the grass texture
         grassTexture.wrapS = THREE.RepeatWrapping;
         grassTexture.wrapT = THREE.RepeatWrapping;
-        grassTexture.repeat.set(10, 10); // Adjust tiling
+        grassTexture.repeat.set(10, 10);
 
         const groundMaterial = new THREE.MeshStandardMaterial({ map: grassTexture });
         const ground = new THREE.Mesh(groundGeometry, groundMaterial);
@@ -53,52 +48,37 @@
         ground.position.y = -0.1;
         scene.add(ground);
 
-        // User's height (1.8 meters)
         const userHeight = 2.2;
         camera.position.set(0, userHeight / 2, 5);
 
-        // Store cat objects for animation
         const catObjects = [];
-
-        // Load cat models with textures
         const loader = new OBJLoader();
-        // const cats = [
-        //     { model: 'assets/3d/collarcat.obj', texture: 'assets/3d/collarcat.png', position: [0, 0.5, 4] },
-        //     { model: 'assets/3d/fishcat.obj', texture: 'assets/3d/fishcat.png', position: [-1, 0.5, 5] },
-        //     { model: 'assets/3d/orangecat.obj', texture: 'assets/3d/orangecat.png', position: [0, 0.5, 6] },
-        //     { model: 'assets/3d/siamesecat.obj', texture: 'assets/3d/siamesecat.png', position: [1, 0.5, 5] }
-        // ];
         const numCats = 20;
-        const radius = 1; // radius of the circle
+        const radius = 1;
         const cats = [];
 
-        // Define the cat types and their corresponding assets
         const catTypes = [
-            { model: 'assets/3d/fishcat.obj', texture: 'assets/3d/fishcat.png' },
-            { model: 'assets/3d/collarcat.obj', texture: 'assets/3d/collarcat.png' },
-            { model: 'assets/3d/orangecat.obj', texture: 'assets/3d/orangecat.png' },
-            { model: 'assets/3d/siamesecat.obj', texture: 'assets/3d/siamesecat.png' },
+            { model: 'assets/3d/fishcat.obj', texture: 'assets/3d/fishcat.png', sound: 'assets/audio/meow2.mp3' },
+            { model: 'assets/3d/collarcat.obj', texture: 'assets/3d/collarcat.png', sound: 'assets/audio/meow1.wav' },
+            { model: 'assets/3d/orangecat.obj', texture: 'assets/3d/orangecat.png', sound: 'assets/audio/meow3.ogg' },
+            { model: 'assets/3d/siamesecat.obj', texture: 'assets/3d/siamesecat.png', sound: 'assets/audio/meow4.wav' },
         ];
 
         for (let i = 0; i < numCats; i++) {
-            const angle = (i / numCats) * Math.PI * 2; // Calculate the angle for each cat
-            const x = radius * Math.cos(angle); // Calculate x position
-            const z = 5 + radius * Math.sin(angle); // Calculate z position (adding 5 to center at (0, 5))
-
-            // Select a cat type based on the current index
+            const angle = (i / numCats) * Math.PI * 2;
+            const x = radius * Math.cos(angle);
+            const z = 5 + radius * Math.sin(angle);
             const catType = catTypes[i % catTypes.length];
-
             cats.push({
                 model: catType.model,
                 texture: catType.texture,
+                sound: catType.sound,
                 position: [x, 0.5, z]
             });
         }
 
-
-        // Animation parameters
         const jumpHeight = 0.5;
-        const jumpDuration = 1000; // milliseconds
+        const jumpDuration = 1000;
 
         cats.forEach(cat => {
             const texture = textureLoader.load(cat.texture, () => {
@@ -111,16 +91,13 @@
                     });
                     object.position.set(...cat.position);
                     object.scale.set(1, 1, 1);
-                    
-                    // Calculate the rotation to face the camera
-                    const dx = 0 - cat.position[0]; // center x (0) - cat x
-                    const dz = 5 - cat.position[2]; // center z (5) - cat z
-                    object.rotation.y = Math.atan2(dx, dz); // Calculate the angle
-
-                    // Add animation properties
+                    const dx = 0 - cat.position[0];
+                    const dz = 5 - cat.position[2];
+                    object.rotation.y = Math.atan2(dx, dz);
                     object.userData.isJumping = false;
                     object.userData.jumpStartTime = 0;
                     object.userData.initialY = cat.position[1];
+                    object.userData.sound = new Audio(cat.sound); // Load the sound
 
                     catObjects.push(object);
                     scene.add(object);
@@ -128,32 +105,24 @@
             });
         });
 
-        // Create sky dome
-        const skyTexture = textureLoader.load('assets/3d/sky.jpg'); // Path to your sky texture
-        const skyMaterial = new THREE.MeshBasicMaterial({
-            map: skyTexture,
-            side: THREE.BackSide // Render the inside of the sphere
-        });
-        const skyGeometry = new THREE.SphereGeometry(500, 32, 32); // Large sphere
+        const skyTexture = textureLoader.load('assets/3d/sky.jpg');
+        const skyMaterial = new THREE.MeshBasicMaterial({ map: skyTexture, side: THREE.BackSide });
+        const skyGeometry = new THREE.SphereGeometry(500, 32, 32);
         const skyDome = new THREE.Mesh(skyGeometry, skyMaterial);
         scene.add(skyDome);
 
-        // Controls
         const controls = new PointerLockControls(camera, document.body);
         scene.add(controls.getObject());
 
-        // Lighting
         const light = new THREE.HemisphereLight(0xffffff, 0x444444);
         light.position.set(0, 200, 0);
         scene.add(light);
 
-        // Handle touch/click events
         function onPointerDown(event) {
             pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
             pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
             raycaster.setFromCamera(pointer, camera);
-
             const intersects = raycaster.intersectObjects(catObjects, true);
 
             if (intersects.length > 0) {
@@ -165,11 +134,12 @@
                 if (catObjects.includes(catObject) && !catObject.userData.isJumping) {
                     catObject.userData.isJumping = true;
                     catObject.userData.jumpStartTime = Date.now();
+                    catObject.userData.sound.currentTime = 0; // Reset sound
+                    catObject.userData.sound.play(); // Play the corresponding sound
                 }
             }
         }
 
-        // Animation function for jumping cats
         function animateCats() {
             const currentTime = Date.now();
 
@@ -189,7 +159,6 @@
             });
         }
 
-        // Event listeners
         window.addEventListener('pointerdown', onPointerDown);
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
@@ -197,7 +166,6 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // Create orientation display div
         const orientationDiv = document.createElement('div');
         orientationDiv.id = 'orientationValues';
         document.body.appendChild(orientationDiv);
@@ -246,7 +214,6 @@
 
         window.addEventListener('deviceorientation', onDeviceOrientation, true);
 
-        // Animation loop
         const animate = function () {
             requestAnimationFrame(animate);
             animateCats();
