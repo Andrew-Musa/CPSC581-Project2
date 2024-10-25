@@ -33,6 +33,10 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
+        // Raycaster for touch detection
+        const raycaster = new THREE.Raycaster();
+        const pointer = new THREE.Vector2();
+
         // Ground
         const groundGeometry = new THREE.PlaneGeometry(100, 100);
         const groundMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
@@ -42,43 +46,54 @@
         scene.add(ground);
 
         // User's height (1.8 meters)
-        const userHeight = 1.8;
+        const userHeight = 2.2;
         camera.position.set(0, userHeight / 2, 5);
+
+        // Store cat objects for animation
+        const catObjects = [];
 
         // Load cat models with textures
         const loader = new OBJLoader();
         const textureLoader = new TextureLoader();
         const cats = [
-            { model: 'assets/3d/collarcat.obj', texture: 'assets/3d/collarcat.png', position: [0, 0.1, 4] },
-            { model: 'assets/3d/fishcat.obj', texture: 'assets/3d/fishcat.png', position: [-1, 0.1, 5] },
-            { model: 'assets/3d/orangecat.obj', texture: 'assets/3d/orangecat.png', position: [0, 0.1, 6] },
-            { model: 'assets/3d/siamesecat.obj', texture: 'assets/3d/siamesecat.png', position: [1, 0.1, 5] }
+            { model: 'assets/3d/collarcat.obj', texture: 'assets/3d/collarcat.png', position: [0, 0.5, 4] },
+            { model: 'assets/3d/fishcat.obj', texture: 'assets/3d/fishcat.png', position: [-1, 0.5, 5] },
+            { model: 'assets/3d/orangecat.obj', texture: 'assets/3d/orangecat.png', position: [0, 0.5, 6] },
+            { model: 'assets/3d/siamesecat.obj', texture: 'assets/3d/siamesecat.png', position: [1, 0.5, 5] }
         ];
+
+        // Animation parameters
+        const jumpHeight = 1;
+        const jumpDuration = 1000; // milliseconds
 
         cats.forEach(cat => {
             const texture = textureLoader.load(cat.texture, () => {
                 loader.load(cat.model, (object) => {
                     object.traverse((child) => {
                         if (child.isMesh) {
-                            child.material.map = texture; // Apply the texture
-                            child.material.needsUpdate = true; // Update material
+                            child.material.map = texture;
+                            child.material.needsUpdate = true;
                         }
                     });
                     object.position.set(...cat.position);
-                    object.scale.set(1, 1, 1); // Adjust size if needed
+                    object.scale.set(1, 1, 1);
 
                     if (cat.model.includes('fishcat.obj')) {
-                        object.rotation.y = Math.PI / 2; // 90 degrees
+                        object.rotation.y = Math.PI / 2;
                     }
-
                     if (cat.model.includes('orangecat.obj')) {
-                        object.rotation.y = Math.PI; // 180 degrees
+                        object.rotation.y = Math.PI;
                     }
-
                     if (cat.model.includes('siamesecat.obj')) {
-                        object.rotation.y = (3 * Math.PI) / 2; // 270 degrees
+                        object.rotation.y = (3 * Math.PI) / 2;
                     }
 
+                    // Add animation properties
+                    object.userData.isJumping = false;
+                    object.userData.jumpStartTime = 0;
+                    object.userData.initialY = cat.position[1];
+
+                    catObjects.push(object);
                     scene.add(object);
                 });
             });
@@ -88,24 +103,69 @@
         const controls = new PointerLockControls(camera, document.body);
         scene.add(controls.getObject());
 
-        // Event listener to enable pointer lock on click
-        document.body.addEventListener('click', () => {
-            controls.lock();
-        });
-
         // Lighting
         const light = new THREE.HemisphereLight(0xffffff, 0x444444);
         light.position.set(0, 200, 0);
         scene.add(light);
 
-        // Resize handling
+        // Handle touch/click events
+        function onPointerDown(event) {
+            // Convert touch coordinates to normalized device coordinates
+            pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+            pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            // Update the raycaster
+            raycaster.setFromCamera(pointer, camera);
+
+            // Check for intersections with cat objects
+            const intersects = raycaster.intersectObjects(catObjects, true);
+
+            if (intersects.length > 0) {
+                // Find the parent object (the cat)
+                let catObject = intersects[0].object;
+                while (catObject.parent && !catObjects.includes(catObject)) {
+                    catObject = catObject.parent;
+                }
+
+                if (catObjects.includes(catObject) && !catObject.userData.isJumping) {
+                    // Start jump animation
+                    catObject.userData.isJumping = true;
+                    catObject.userData.jumpStartTime = Date.now();
+                }
+            }
+        }
+
+        // Animation function for jumping cats
+        function animateCats() {
+            const currentTime = Date.now();
+
+            catObjects.forEach(cat => {
+                if (cat.userData.isJumping) {
+                    const elapsed = currentTime - cat.userData.jumpStartTime;
+                    const progress = elapsed / jumpDuration;
+
+                    if (progress >= 1) {
+                        // Reset cat position and jump state
+                        cat.position.y = cat.userData.initialY;
+                        cat.userData.isJumping = false;
+                    } else {
+                        // Parabolic jump motion
+                        const jumpProgress = Math.sin(progress * Math.PI);
+                        cat.position.y = cat.userData.initialY + jumpHeight * jumpProgress;
+                    }
+                }
+            });
+        }
+
+        // Event listeners
+        window.addEventListener('pointerdown', onPointerDown);
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // Create a div to display orientation values
+        // Create orientation display div
         const orientationDiv = document.createElement('div');
         orientationDiv.id = 'orientationValues';
         document.body.appendChild(orientationDiv);
@@ -116,17 +176,14 @@
         let prevAlpha = null;
         let accumulatedAlpha = 0;
 
-        // Function to handle angle wrapping
         function getShortestRotation(from, to) {
             const diff = ((to - from + 180) % 360) - 180;
             return diff < -180 ? diff + 360 : diff;
         }
 
-        // Handle device orientation
         const onDeviceOrientation = (event) => {
             const { alpha, beta } = event;
 
-            // Handle alpha wraparound
             if (prevAlpha !== null) {
                 const alphaDiff = getShortestRotation(prevAlpha, alpha);
                 accumulatedAlpha += alphaDiff;
@@ -135,26 +192,20 @@
             }
             prevAlpha = alpha;
 
-            // Update smoothed values towards the new values
             smoothedAlpha = THREE.MathUtils.lerp(smoothedAlpha, accumulatedAlpha, 0.1);
             smoothedBeta = THREE.MathUtils.lerp(smoothedBeta, beta, 0.1);
 
-            // Convert angles to radians
             const alphaRad = THREE.MathUtils.degToRad(smoothedAlpha - 90);
             const betaRad = THREE.MathUtils.degToRad(smoothedBeta - 90);
 
-            // Create rotation quaternion for yaw (alpha)
             const quaternionYaw = new THREE.Quaternion();
             quaternionYaw.setFromAxisAngle(new THREE.Vector3(0, 1, 0), alphaRad);
 
-            // Create rotation quaternion for pitch (beta)
             const quaternionPitch = new THREE.Quaternion();
             quaternionPitch.setFromAxisAngle(new THREE.Vector3(1, 0, 0), betaRad);
 
-            // Combine rotations: first yaw, then pitch
             camera.quaternion.copy(quaternionYaw).multiply(quaternionPitch);
 
-            // Update the displayed values
             orientationDiv.innerHTML = `
                 Alpha: ${Math.round(alpha)}<br>
                 Smoothed Alpha: ${Math.round(smoothedAlpha % 360)}<br>
@@ -162,12 +213,12 @@
             `;
         };
 
-        // Event listener for device orientation
         window.addEventListener('deviceorientation', onDeviceOrientation, true);
 
         // Animation loop
         const animate = function () {
             requestAnimationFrame(animate);
+            animateCats();
             renderer.render(scene, camera);
         };
 
