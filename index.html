@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cool Unlock</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tensorflow/4.7.0/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/speech-commands"></script>
     <style>
         body { margin: 0; }
         canvas { display: block; }
@@ -18,6 +20,17 @@
             border-radius: 5px;
             pointer-events: none;
         }
+        #voiceStatus {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: black;
+            font-size: 20px;
+            background: rgba(255, 255, 255, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            pointer-events: none;
+        }
     </style>
     <script type="module">
         import * as THREE from 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/build/three.module.js';
@@ -25,12 +38,73 @@
         import { OBJLoader } from 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/jsm/loaders/OBJLoader.js';
         import { TextureLoader } from 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/src/loaders/TextureLoader.js';
 
+        // Voice recognition setup
+        let recognizer;
+        let selectedOrangeCat = false;
+
+        async function loadMetadata() {
+            const response = await fetch('./models/tm-my-audio-model/metadata.json');
+            return await response.json();
+        }
+
+        async function createModel() {
+            try {
+                const metadata = await loadMetadata();
+                const recognizer = speechCommands.create(
+                    "BROWSER_FFT",
+                    undefined,
+                    './models/tm-my-audio-model/model.json',
+                    metadata
+                );
+                await recognizer.ensureModelLoaded();
+                return recognizer;
+            } catch (error) {
+                console.error('Error creating model:', error);
+                throw error;
+            }
+        }
+
+        async function initVoiceRecognition() {
+            try {
+                recognizer = await createModel();
+                const classLabels = recognizer.wordLabels();
+                const voiceStatus = document.getElementById('voiceStatus');
+
+                recognizer.listen(result => {
+                    const scores = result.scores;
+                    const maxScore = Math.max(...scores);
+                    const maxScoreIndex = scores.indexOf(maxScore);
+                    const detectedLabel = classLabels[maxScoreIndex];
+                    
+                    voiceStatus.textContent = detectedLabel === 'psps' ? 'psps detected!' : 'listening...';
+
+                    if (detectedLabel === 'psps' && selectedOrangeCat) {
+                        window.location.href = 'unlocked.html';
+                    }
+                }, {
+                    includeSpectrogram: true,
+                    probabilityThreshold: 0.99,
+                    invokeCallbackOnNoiseAndUnknown: true,
+                    overlapFactor: 0.5
+                });
+            } catch (error) {
+                console.error('Error in voice recognition init:', error);
+            }
+        }
+
+        // Three.js scene setup
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0xffffff);
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer();
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
+
+        // Create voice status display
+        const voiceStatusDiv = document.createElement('div');
+        voiceStatusDiv.id = 'voiceStatus';
+        voiceStatusDiv.textContent = 'Initializing voice...';
+        document.body.appendChild(voiceStatusDiv);
 
         const raycaster = new THREE.Raycaster();
         const pointer = new THREE.Vector2();
@@ -131,11 +205,25 @@
                     catObject = catObject.parent;
                 }
 
-                if (catObjects.includes(catObject) && !catObject.userData.isJumping) {
-                    catObject.userData.isJumping = true;
-                    catObject.userData.jumpStartTime = Date.now();
-                    catObject.userData.sound.currentTime = 0; // Reset sound
-                    catObject.userData.sound.play(); // Play the corresponding sound
+                if (catObjects.includes(catObject)) {
+                    // Check if it's an orange cat
+                    const catIndex = catObjects.indexOf(catObject);
+                    const isOrangeCat = cats[catIndex].model.includes('orangecat');
+                    
+                    if (isOrangeCat) {
+                        selectedOrangeCat = true;
+                        voiceStatusDiv.textContent = 'Orange cat selected! Say "psps"';
+                    } else {
+                        selectedOrangeCat = false;
+                        voiceStatusDiv.textContent = 'Listening...';
+                    }
+
+                    if (!catObject.userData.isJumping) {
+                        catObject.userData.isJumping = true;
+                        catObject.userData.jumpStartTime = Date.now();
+                        catObject.userData.sound.currentTime = 0;
+                        catObject.userData.sound.play();
+                    }
                 }
             }
         }
@@ -211,6 +299,11 @@
                 Beta: ${Math.round(smoothedBeta)}<br>
             `;
         };
+
+        // Initialize voice recognition when the page loads
+        window.addEventListener('load', () => {
+            initVoiceRecognition();
+        });
 
         window.addEventListener('deviceorientation', onDeviceOrientation, true);
 
