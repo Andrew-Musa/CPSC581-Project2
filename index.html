@@ -40,7 +40,7 @@
 
         // Voice recognition setup
         let recognizer;
-        let selectedOrangeCat = false;
+        let selectedSpecialCat = false;
 
         async function loadMetadata() {
             const response = await fetch('./models/tm-my-audio-model/metadata.json');
@@ -78,7 +78,7 @@
                     
                     voiceStatus.textContent = detectedLabel === 'psps' ? 'psps detected!' : 'listening...';
 
-                    if (detectedLabel === 'psps' && selectedOrangeCat) {
+                    if (detectedLabel === 'psps' && selectedSpecialCat) {
                         window.location.href = 'unlocked.html';
                     }
                 }, {
@@ -131,6 +131,7 @@
         const radius = 1;
         const cats = [];
 
+        // Define cat types
         const catTypes = [
             { model: 'assets/3d/fishcat.obj', texture: 'assets/3d/fishcat.png', sound: 'assets/audio/meow2.mp3' },
             { model: 'assets/3d/collarcat.obj', texture: 'assets/3d/collarcat.png', sound: 'assets/audio/meow1.wav' },
@@ -138,12 +139,37 @@
             { model: 'assets/3d/siamesecat.obj', texture: 'assets/3d/siamesecat.png', sound: 'assets/audio/meow4.wav' },
         ];
 
+        // Fixed cat assignments - each number represents the index of catTypes
+        const fixedCatTypes = [
+            0, // ID 0 - fishcat
+            2, // ID 1 - orangecat (special cat)
+            1, // ID 2 - collarcat
+            3, // ID 3 - siamesecat
+            0, // ID 4 - fishcat
+            1, // ID 5 - collarcat
+            2, // ID 6 - orangecat
+            3, // ID 7 - siamesecat
+            0, // ID 8 - fishcat
+            1, // ID 9 - collarcat
+            2, // ID 10 - orangecat
+            3, // ID 11 - siamesecat
+            0, // ID 12 - fishcat
+            1, // ID 13 - collarcat
+            2, // ID 14 - orangecat
+            3, // ID 15 - siamesecat
+            0, // ID 16 - fishcat
+            1, // ID 17 - collarcat
+            2, // ID 18 - orangecat
+            3  // ID 19 - siamesecat
+        ];
+
         for (let i = 0; i < numCats; i++) {
             const angle = (i / numCats) * Math.PI * 2;
             const x = radius * Math.cos(angle);
             const z = 5 + radius * Math.sin(angle);
-            const catType = catTypes[i % catTypes.length];
+            const catType = catTypes[fixedCatTypes[i]];
             cats.push({
+                id: i,
                 model: catType.model,
                 texture: catType.texture,
                 sound: catType.sound,
@@ -168,10 +194,13 @@
                     const dx = 0 - cat.position[0];
                     const dz = 5 - cat.position[2];
                     object.rotation.y = Math.atan2(dx, dz);
-                    object.userData.isJumping = false;
-                    object.userData.jumpStartTime = 0;
-                    object.userData.initialY = cat.position[1];
-                    object.userData.sound = new Audio(cat.sound); // Load the sound
+                    object.userData = {
+                        id: cat.id,
+                        isJumping: false,
+                        jumpStartTime: 0,
+                        initialY: cat.position[1],
+                        sound: new Audio(cat.sound)
+                    };
 
                     catObjects.push(object);
                     scene.add(object);
@@ -206,15 +235,12 @@
                 }
 
                 if (catObjects.includes(catObject)) {
-                    // Check if it's an orange cat
-                    const catIndex = catObjects.indexOf(catObject);
-                    const isOrangeCat = cats[catIndex].model.includes('orangecat');
+                    // Check if it's the special cat (ID 1)
+                    selectedSpecialCat = catObject.userData.id === 1;
                     
-                    if (isOrangeCat) {
-                        selectedOrangeCat = true;
-                        voiceStatusDiv.textContent = 'Orange cat selected! Say "psps"';
+                    if (selectedSpecialCat) {
+                        voiceStatusDiv.textContent = 'Special cat selected! Say "psps"';
                     } else {
-                        selectedOrangeCat = false;
                         voiceStatusDiv.textContent = 'Listening...';
                     }
 
