@@ -319,10 +319,15 @@
 
             camera.quaternion.copy(quaternionYaw).multiply(quaternionPitch);
 
+            // Get current time and date
+            const now = new Date();
+            const timeString = now.toLocaleTimeString();
+            const dateString = now.toLocaleDateString();
+
             orientationDiv.innerHTML = `
-                Alpha: ${Math.round(alpha)}<br>
-                Smoothed Alpha: ${Math.round(smoothedAlpha % 360)}<br>
-                Beta: ${Math.round(smoothedBeta)}<br>
+                ${timeString}<br>
+                ${dateString}<br> 
+                8° ⛅️
             `;
         };
 
