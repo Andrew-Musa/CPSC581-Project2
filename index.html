@@ -13,9 +13,9 @@
             position: absolute;
             top: 10px;
             left: 10px;
-            color: black;
+            color: white;
             font-size: 20px;
-            background: rgba(255, 255, 255, 0.7);
+            background: rgba(0, 0, 0, 0.7);
             padding: 10px;
             border-radius: 5px;
             pointer-events: none;
@@ -24,9 +24,9 @@
             position: absolute;
             top: 10px;
             right: 10px;
-            color: black;
+            color: white;
             font-size: 20px;
-            background: rgba(255, 255, 255, 0.7);
+            background: rgba(0, 0, 0, 0.7);
             padding: 10px;
             border-radius: 5px;
             pointer-events: none;
@@ -36,7 +36,7 @@
         import * as THREE from 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/build/three.module.js';
         import { PointerLockControls } from 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/jsm/controls/PointerLockControls.js';
         import { OBJLoader } from 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/jsm/loaders/OBJLoader.js';
-        import { TextureLoader } from 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/src/loaders/TextureLoader.js';
+        import { GLTFLoader } from 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/jsm/loaders/GLTFLoader.js';
 
         // Voice recognition setup
         let recognizer;
@@ -76,7 +76,7 @@
                     const maxScoreIndex = scores.indexOf(maxScore);
                     const detectedLabel = classLabels[maxScoreIndex];
                     
-                    voiceStatus.textContent = detectedLabel === 'psps' ? 'psps detected!' : 'listening...';
+                    // voiceStatus.textContent = detectedLabel === 'psps' ? 'psps detected!' : 'listening...';
 
                     if (detectedLabel === 'psps' && selectedSpecialCat) {
                         window.location.href = 'unlocked.html';
@@ -94,41 +94,75 @@
 
         // Three.js scene setup
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xffffff);
+        scene.background = new THREE.Color(0x000000); // Set black background initially
+
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer();
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.body.appendChild(renderer.domElement);
 
         // Create voice status display
         const voiceStatusDiv = document.createElement('div');
         voiceStatusDiv.id = 'voiceStatus';
-        voiceStatusDiv.textContent = 'Initializing voice...';
-        document.body.appendChild(voiceStatusDiv);
+        // voiceStatusDiv.textContent = 'Initializing voice...';
+        // document.body.appendChild(voiceStatusDiv);
 
         const raycaster = new THREE.Raycaster();
         const pointer = new THREE.Vector2();
-
-        const groundGeometry = new THREE.PlaneGeometry(100, 100);
         const textureLoader = new THREE.TextureLoader();
-        const grassTexture = textureLoader.load('assets/3d/grass.jpg');
-        grassTexture.wrapS = THREE.RepeatWrapping;
-        grassTexture.wrapT = THREE.RepeatWrapping;
-        grassTexture.repeat.set(10, 10);
+        // Load Japanese Room
+        const gltfLoader = new GLTFLoader();
+        gltfLoader.load(
+            'assets/japanese-style-room/room.glb',
+            function (gltf) {
+                const room = gltf.scene;
+                room.traverse((child) => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                        
+                        
+                        // Map your texture files to specific materials or meshes
+                        if (child.name.includes('floor') || child.name.includes('ground')) {
+                            const floorTexture = textureLoader.load('assets/japanese-style-room/textures/internal_ground_ao_texture.jpeg');
+                            child.material.map = floorTexture;
+                        }
+                        // Add more texture mappings as needed
+                    }
+                });
+                room.position.set(0, 0, 0);
+                scene.add(room);
+            },
+            undefined,
+            function (error) {
+                console.error('Error loading room:', error);
+            }
+        );
 
-        const groundMaterial = new THREE.MeshStandardMaterial({ map: grassTexture });
-        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-        ground.rotation.x = -Math.PI / 2;
-        ground.position.y = -0.1;
-        scene.add(ground);
+        // Lighting setup for indoor scene
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+        scene.add(ambientLight);
 
-        const userHeight = 2.2;
-        camera.position.set(0, userHeight / 2, 5);
+        const mainLight = new THREE.DirectionalLight(0xffffff, 0.3);
+        mainLight.position.set(5, 5, 5);
+        mainLight.castShadow = true;
+        scene.add(mainLight);
 
+        const pointLight1 = new THREE.PointLight(0xffd1b3, 0.5); // Warm light
+        pointLight1.position.set(0, 3, 0);
+        scene.add(pointLight1);
+
+        // Camera setup
+        const userHeight = 7; // Average human height in meters
+        camera.position.set(0, userHeight, 5);
+
+        // Cat setup remains largely the same, but adjust initial positions
         const catObjects = [];
         const loader = new OBJLoader();
         const numCats = 20;
-        const radius = 1;
+        const radius = 4; // Adjusted for room size
         const cats = [];
 
         // Define cat types
@@ -163,6 +197,7 @@
             3  // ID 19 - siamesecat
         ];
 
+        // Adjust cat positions to be appropriate for room size
         for (let i = 0; i < numCats; i++) {
             const angle = (i / numCats) * Math.PI * 2;
             const x = radius * Math.cos(angle);
@@ -173,11 +208,11 @@
                 model: catType.model,
                 texture: catType.texture,
                 sound: catType.sound,
-                position: [x, 0.5, z]
+                position: [x, 1, z] // Adjusted Y position to be on room floor
             });
         }
 
-        const jumpHeight = 0.5;
+        const jumpHeight = 1;
         const jumpDuration = 1000;
 
         cats.forEach(cat => {
@@ -187,10 +222,12 @@
                         if (child.isMesh) {
                             child.material.map = texture;
                             child.material.needsUpdate = true;
+
+                            child.material.color.multiplyScalar(0.9);
                         }
                     });
                     object.position.set(...cat.position);
-                    object.scale.set(1, 1, 1);
+                    object.scale.set(5, 5, 5);
                     const dx = 0 - cat.position[0];
                     const dz = 5 - cat.position[2];
                     object.rotation.y = Math.atan2(dx, dz);
@@ -239,9 +276,9 @@
                     selectedSpecialCat = catObject.userData.id === 1;
                     
                     if (selectedSpecialCat) {
-                        voiceStatusDiv.textContent = 'Special cat selected! Say "psps"';
+                        // voiceStatusDiv.textContent = 'Special cat selected! Say "psps"';
                     } else {
-                        voiceStatusDiv.textContent = 'Listening...';
+                        // voiceStatusDiv.textContent = 'Listening...';
                     }
 
                     if (!catObject.userData.isJumping) {
