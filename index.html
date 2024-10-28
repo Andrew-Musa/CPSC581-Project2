@@ -142,15 +142,15 @@
         );
 
         // Lighting setup for indoor scene
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
         scene.add(ambientLight);
 
-        const mainLight = new THREE.DirectionalLight(0xffffff, 0.3);
+        const mainLight = new THREE.DirectionalLight(0xffffff, 0.1);
         mainLight.position.set(5, 5, 5);
         mainLight.castShadow = true;
         scene.add(mainLight);
 
-        const pointLight1 = new THREE.PointLight(0xffd1b3, 0.5); // Warm light
+        const pointLight1 = new THREE.PointLight(0xffd1b3, 0.05); // Warm light
         pointLight1.position.set(0, 3, 0);
         scene.add(pointLight1);
 
@@ -171,6 +171,18 @@
             { model: 'assets/3d/collarcat.obj', texture: 'assets/3d/collarcat.png', sound: 'assets/audio/meow1.wav' },
             { model: 'assets/3d/orangecat.obj', texture: 'assets/3d/orangecat.png', sound: 'assets/audio/meow3.ogg' },
             { model: 'assets/3d/siamesecat.obj', texture: 'assets/3d/siamesecat.png', sound: 'assets/audio/meow4.wav' },
+            { model: 'assets/3d/fishcat.obj', texture: 'assets/3d/fishcat.png', sound: 'assets/audio/meow1.wav' },
+            { model: 'assets/3d/collarcat.obj', texture: 'assets/3d/collarcat.png', sound: 'assets/audio/meow2.mp3' },
+            { model: 'assets/3d/orangecat.obj', texture: 'assets/3d/orangecat.png', sound: 'assets/audio/meow4.wav' },
+            { model: 'assets/3d/siamesecat.obj', texture: 'assets/3d/siamesecat.png', sound: 'assets/audio/meow3.ogg' },
+            { model: 'assets/3d/fishcat.obj', texture: 'assets/3d/fishcat.png', sound: 'assets/audio/meow3.ogg' },
+            { model: 'assets/3d/collarcat.obj', texture: 'assets/3d/collarcat.png', sound: 'assets/audio/meow4.wav' },
+            { model: 'assets/3d/orangecat.obj', texture: 'assets/3d/orangecat.png', sound: 'assets/audio/meow1.wav' },
+            { model: 'assets/3d/siamesecat.obj', texture: 'assets/3d/siamesecat.png', sound: 'assets/audio/meow2.mp3' },
+            { model: 'assets/3d/fishcat.obj', texture: 'assets/3d/fishcat.png', sound: 'assets/audio/meow4.wav' },
+            { model: 'assets/3d/collarcat.obj', texture: 'assets/3d/collarcat.png', sound: 'assets/audio/meow3.ogg' },
+            { model: 'assets/3d/orangecat.obj', texture: 'assets/3d/orangecat.png', sound: 'assets/audio/meow2.mp3' },
+            { model: 'assets/3d/siamesecat.obj', texture: 'assets/3d/siamesecat.png', sound: 'assets/audio/meow1.wav' },
         ];
 
         // Fixed cat assignments - each number represents the index of catTypes
@@ -179,22 +191,22 @@
             2, // ID 1 - orangecat (special cat)
             1, // ID 2 - collarcat
             3, // ID 3 - siamesecat
-            0, // ID 4 - fishcat
-            1, // ID 5 - collarcat
-            2, // ID 6 - orangecat
-            3, // ID 7 - siamesecat
-            0, // ID 8 - fishcat
-            1, // ID 9 - collarcat
-            2, // ID 10 - orangecat
-            3, // ID 11 - siamesecat
+            4, // ID 4 - fishcat
+            5, // ID 5 - collarcat
+            6, // ID 6 - orangecat
+            7, // ID 7 - siamesecat
+            8, // ID 8 - fishcat
+            9, // ID 9 - collarcat
+            10, // ID 10 - orangecat
+            11, // ID 11 - siamesecat
             0, // ID 12 - fishcat
             1, // ID 13 - collarcat
-            2, // ID 14 - orangecat
+            10, // ID 14 - orangecat
             3, // ID 15 - siamesecat
-            0, // ID 16 - fishcat
-            1, // ID 17 - collarcat
-            2, // ID 18 - orangecat
-            3  // ID 19 - siamesecat
+            4, // ID 16 - fishcat
+            5, // ID 17 - collarcat
+            6, // ID 18 - orangecat
+            7  // ID 19 - siamesecat
         ];
 
         // Adjust cat positions to be appropriate for room size
