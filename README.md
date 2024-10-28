@@ -4,7 +4,7 @@
 
 1. Clone the main branch to your local machine
 2. Host the application on your machine using either an extension in VScode or by using a fake certificate. Please make sure that you host the web application as an HTTPS and not as an HTTP as some features don't work with HTTP.
-3. Once the web application is hosted on your machine, go to https://IP-Address:Port/index.html on your Android device.
+3. Once the web application is hosted on your machine, go to `https://IP-Address:Port/index.html` on your Android device.
 4. Enjoy finding Gus and unlocking!
 
 ## References:
