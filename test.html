@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Audio Classifier</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tensorflow/4.7.0/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/speech-commands"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        #result {
+            font-size: 24px;
+            margin: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div id="result">Listening...</div>
+
+    <script>
+        async function loadMetadata() {
+            const response = await fetch('./models/tm-my-audio-model/metadata.json');
+            return await response.json();
+        }
+
+        async function createModel() {
+            try {
+                const metadata = await loadMetadata();
+                
+                const recognizer = speechCommands.create(
+                    "BROWSER_FFT",
+                    undefined,
+                    './models/tm-my-audio-model/model.json',
+                    metadata
+                );
+
+                await recognizer.ensureModelLoaded();
+                return recognizer;
+            } catch (error) {
+                console.error('Error creating model:', error);
+                document.getElementById('result').textContent = 'Error loading model: ' + error.message;
+                throw error;
+            }
+        }
+
+        async function init() {
+            try {
+                const recognizer = await createModel();
+                const classLabels = recognizer.wordLabels();
+                const resultDiv = document.getElementById('result');
+
+                recognizer.listen(result => {
+                    const scores = result.scores;
+                    const maxScore = Math.max(...scores);
+                    const maxScoreIndex = scores.indexOf(maxScore);
+                    const detectedLabel = classLabels[maxScoreIndex];
+                    
+                    resultDiv.textContent = detectedLabel === 'psps' ? 'psps' : 'background noise';
+                }, {
+                    includeSpectrogram: true,
+                    probabilityThreshold: 0.99,
+                    invokeCallbackOnNoiseAndUnknown: true,
+                    overlapFactor: 0.5
+                });
+            } catch (error) {
+                console.error('Error in init:', error);
+                document.getElementById('result').textContent = 'Error initializing: ' + error.message;
+            }
+        }
+
+        // Start the audio classification when the page loads
+        window.addEventListener('load', () => init());
+    </script>
+</body>
+</html>

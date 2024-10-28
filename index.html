@@ -1,16 +1,401 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Cool Unlock</title>
-        <link rel="stylesheet" href="styles.css">
-        <script src="libraries/p5.min.js"></script>
-        <script src="sketch.js"></script>
-    </head>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cool Unlock</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tensorflow/4.7.0/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/speech-commands"></script>
+    <style>
+        body { margin: 0; }
+        canvas { display: block; }
+        #orientationValues {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            pointer-events: none;
+        }
+        #voiceStatus {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: white;
+            font-size: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            pointer-events: none;
+        }
+    </style>
+    <script type="module">
+        import * as THREE from 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/build/three.module.js';
+        import { PointerLockControls } from 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/jsm/controls/PointerLockControls.js';
+        import { OBJLoader } from 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/jsm/loaders/OBJLoader.js';
+        import { GLTFLoader } from 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/jsm/loaders/GLTFLoader.js';
 
-    <body>
-        <!-- <div id="overlay"></div> -->
-        <!-- <script src="back-end.js"></script> -->
-    </body>
+        // Voice recognition setup
+        let recognizer;
+        let selectedSpecialCat = false;
+
+        async function loadMetadata() {
+            const response = await fetch('./models/tm-my-audio-model/metadata.json');
+            return await response.json();
+        }
+
+        async function createModel() {
+            try {
+                const metadata = await loadMetadata();
+                const recognizer = speechCommands.create(
+                    "BROWSER_FFT",
+                    undefined,
+                    './models/tm-my-audio-model/model.json',
+                    metadata
+                );
+                await recognizer.ensureModelLoaded();
+                return recognizer;
+            } catch (error) {
+                console.error('Error creating model:', error);
+                throw error;
+            }
+        }
+
+        async function initVoiceRecognition() {
+            try {
+                recognizer = await createModel();
+                const classLabels = recognizer.wordLabels();
+                const voiceStatus = document.getElementById('voiceStatus');
+
+                recognizer.listen(result => {
+                    const scores = result.scores;
+                    const maxScore = Math.max(...scores);
+                    const maxScoreIndex = scores.indexOf(maxScore);
+                    const detectedLabel = classLabels[maxScoreIndex];
+                    
+                    // voiceStatus.textContent = detectedLabel === 'psps' ? 'psps detected!' : 'listening...';
+
+                    if (detectedLabel === 'psps' && selectedSpecialCat) {
+                        window.location.href = 'unlocked.html';
+                    }
+                }, {
+                    includeSpectrogram: true,
+                    probabilityThreshold: 0.99,
+                    invokeCallbackOnNoiseAndUnknown: true,
+                    overlapFactor: 0.5
+                });
+            } catch (error) {
+                console.error('Error in voice recognition init:', error);
+            }
+        }
+
+        // Three.js scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000000); // Set black background initially
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
+
+        // Create voice status display
+        const voiceStatusDiv = document.createElement('div');
+        voiceStatusDiv.id = 'voiceStatus';
+        // voiceStatusDiv.textContent = 'Initializing voice...';
+        // document.body.appendChild(voiceStatusDiv);
+
+        const raycaster = new THREE.Raycaster();
+        const pointer = new THREE.Vector2();
+        const textureLoader = new THREE.TextureLoader();
+        // Load Japanese Room
+        const gltfLoader = new GLTFLoader();
+        gltfLoader.load(
+            'assets/japanese-style-room/room.glb',
+            function (gltf) {
+                const room = gltf.scene;
+                room.traverse((child) => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+                        
+                        
+                        // Map your texture files to specific materials or meshes
+                        if (child.name.includes('floor') || child.name.includes('ground')) {
+                            const floorTexture = textureLoader.load('assets/japanese-style-room/textures/internal_ground_ao_texture.jpeg');
+                            child.material.map = floorTexture;
+                        }
+                        // Add more texture mappings as needed
+                    }
+                });
+                room.position.set(0, 0, -2);
+                scene.add(room);
+            },
+            undefined,
+            function (error) {
+                console.error('Error loading room:', error);
+            }
+        );
+
+        // Lighting setup for indoor scene
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+        scene.add(ambientLight);
+
+        const mainLight = new THREE.DirectionalLight(0xffffff, 0.2);
+        mainLight.position.set(5, 5, 5);
+        mainLight.castShadow = true;
+        scene.add(mainLight);
+
+        const pointLight1 = new THREE.PointLight(0xffd1b3, 0.1); // Warm light
+        pointLight1.position.set(0, 3, 0);
+        scene.add(pointLight1);
+
+        // Camera setup
+        const userHeight = 7; // Average human height in meters
+        camera.position.set(0, userHeight, 5);
+
+        // Cat setup remains largely the same, but adjust initial positions
+        const catObjects = [];
+        const loader = new OBJLoader();
+        const numCats = 20;
+        const radius = 7; // Adjusted for room size
+        const cats = [];
+
+        // Define cat types
+        const catTypes = [
+            { model: 'assets/3d/fishcat.obj', texture: 'assets/3d/fishcat.png', sound: 'assets/audio/meow2.mp3' },
+            { model: 'assets/3d/collarcat.obj', texture: 'assets/3d/collarcat.png', sound: 'assets/audio/meow1.wav' },
+            { model: 'assets/3d/orangecat.obj', texture: 'assets/3d/orangecat.png', sound: 'assets/audio/meow3.ogg' },
+            { model: 'assets/3d/siamesecat.obj', texture: 'assets/3d/siamesecat.png', sound: 'assets/audio/meow4.wav' },
+            { model: 'assets/3d/fishcat.obj', texture: 'assets/3d/fishcat.png', sound: 'assets/audio/meow1.wav' },
+            { model: 'assets/3d/collarcat.obj', texture: 'assets/3d/collarcat.png', sound: 'assets/audio/meow2.mp3' },
+            { model: 'assets/3d/orangecat.obj', texture: 'assets/3d/orangecat.png', sound: 'assets/audio/meow4.wav' },
+            { model: 'assets/3d/siamesecat.obj', texture: 'assets/3d/siamesecat.png', sound: 'assets/audio/meow3.ogg' },
+            { model: 'assets/3d/fishcat.obj', texture: 'assets/3d/fishcat.png', sound: 'assets/audio/meow3.ogg' },
+            { model: 'assets/3d/collarcat.obj', texture: 'assets/3d/collarcat.png', sound: 'assets/audio/meow4.wav' },
+            { model: 'assets/3d/orangecat.obj', texture: 'assets/3d/orangecat.png', sound: 'assets/audio/meow1.wav' },
+            { model: 'assets/3d/siamesecat.obj', texture: 'assets/3d/siamesecat.png', sound: 'assets/audio/meow2.mp3' },
+            { model: 'assets/3d/fishcat.obj', texture: 'assets/3d/fishcat.png', sound: 'assets/audio/meow4.wav' },
+            { model: 'assets/3d/collarcat.obj', texture: 'assets/3d/collarcat.png', sound: 'assets/audio/meow3.ogg' },
+            { model: 'assets/3d/orangecat.obj', texture: 'assets/3d/orangecat.png', sound: 'assets/audio/meow2.mp3' },
+            { model: 'assets/3d/siamesecat.obj', texture: 'assets/3d/siamesecat.png', sound: 'assets/audio/meow1.wav' },
+        ];
+
+        // Fixed cat assignments - each number represents the index of catTypes
+        const fixedCatTypes = [
+            0, // ID 0 - fishcat
+            2, // ID 1 - orangecat (special cat)
+            1, // ID 2 - collarcat
+            3, // ID 3 - siamesecat
+            4, // ID 4 - fishcat
+            5, // ID 5 - collarcat
+            6, // ID 6 - orangecat
+            7, // ID 7 - siamesecat
+            8, // ID 8 - fishcat
+            9, // ID 9 - collarcat
+            10, // ID 10 - orangecat
+            11, // ID 11 - siamesecat
+            0, // ID 12 - fishcat
+            1, // ID 13 - collarcat
+            10, // ID 14 - orangecat
+            3, // ID 15 - siamesecat
+            4, // ID 16 - fishcat
+            5, // ID 17 - collarcat
+            6, // ID 18 - orangecat
+            7  // ID 19 - siamesecat
+        ];
+
+        // Adjust cat positions to be appropriate for room size
+        for (let i = 0; i < numCats; i++) {
+            const angle = (i / numCats) * Math.PI * 2;
+            const x = radius * Math.cos(angle);
+            const z = 5 + radius * Math.sin(angle);
+            const catType = catTypes[fixedCatTypes[i]];
+            cats.push({
+                id: i,
+                model: catType.model,
+                texture: catType.texture,
+                sound: catType.sound,
+                position: [x, 1, z] // Adjusted Y position to be on room floor
+            });
+        }
+
+        const jumpHeight = 1;
+        const jumpDuration = 1000;
+
+        cats.forEach(cat => {
+            const texture = textureLoader.load(cat.texture, () => {
+                loader.load(cat.model, (object) => {
+                    object.traverse((child) => {
+                        if (child.isMesh) {
+                            child.material.map = texture;
+                            child.material.needsUpdate = true;
+
+                            child.material.color.multiplyScalar(0.9);
+                        }
+                    });
+                    object.position.set(...cat.position);
+                    object.scale.set(5, 5, 5);
+                    const dx = 0 - cat.position[0];
+                    const dz = 5 - cat.position[2];
+                    object.rotation.y = Math.atan2(dx, dz);
+                    object.userData = {
+                        id: cat.id,
+                        isJumping: false,
+                        jumpStartTime: 0,
+                        initialY: cat.position[1],
+                        sound: new Audio(cat.sound)
+                    };
+
+                    catObjects.push(object);
+                    scene.add(object);
+                });
+            });
+        });
+
+        const skyTexture = textureLoader.load('assets/3d/sky.jpg');
+        const skyMaterial = new THREE.MeshBasicMaterial({ map: skyTexture, side: THREE.BackSide });
+        const skyGeometry = new THREE.SphereGeometry(500, 32, 32);
+        const skyDome = new THREE.Mesh(skyGeometry, skyMaterial);
+        scene.add(skyDome);
+
+        const controls = new PointerLockControls(camera, document.body);
+        scene.add(controls.getObject());
+
+        const light = new THREE.HemisphereLight(0xffffff, 0x444444);
+        light.position.set(0, 200, 0);
+        scene.add(light);
+
+        function onPointerDown(event) {
+            pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+            pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(pointer, camera);
+            const intersects = raycaster.intersectObjects(catObjects, true);
+
+            if (intersects.length > 0) {
+                let catObject = intersects[0].object;
+                while (catObject.parent && !catObjects.includes(catObject)) {
+                    catObject = catObject.parent;
+                }
+
+                if (catObjects.includes(catObject)) {
+                    // Check if it's the special cat (ID 1)
+                    selectedSpecialCat = catObject.userData.id === 1;
+                    
+                    if (selectedSpecialCat) {
+                        // voiceStatusDiv.textContent = 'Special cat selected! Say "psps"';
+                    } else {
+                        // voiceStatusDiv.textContent = 'Listening...';
+                    }
+
+                    if (!catObject.userData.isJumping) {
+                        catObject.userData.isJumping = true;
+                        catObject.userData.jumpStartTime = Date.now();
+                        catObject.userData.sound.currentTime = 0;
+                        catObject.userData.sound.play();
+                    }
+                }
+            }
+        }
+
+        function animateCats() {
+            const currentTime = Date.now();
+
+            catObjects.forEach(cat => {
+                if (cat.userData.isJumping) {
+                    const elapsed = currentTime - cat.userData.jumpStartTime;
+                    const progress = elapsed / jumpDuration;
+
+                    if (progress >= 1) {
+                        cat.position.y = cat.userData.initialY;
+                        cat.userData.isJumping = false;
+                    } else {
+                        const jumpProgress = Math.sin(progress * Math.PI);
+                        cat.position.y = cat.userData.initialY + jumpHeight * jumpProgress;
+                    }
+                }
+            });
+        }
+
+        window.addEventListener('pointerdown', onPointerDown);
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        const orientationDiv = document.createElement('div');
+        orientationDiv.id = 'orientationValues';
+        document.body.appendChild(orientationDiv);
+
+        let smoothedAlpha = 0;
+        let smoothedBeta = 0;
+        let prevAlpha = null;
+        let accumulatedAlpha = 0;
+
+        function getShortestRotation(from, to) {
+            const diff = ((to - from + 180) % 360) - 180;
+            return diff < -180 ? diff + 360 : diff;
+        }
+
+        const onDeviceOrientation = (event) => {
+            const { alpha, beta } = event;
+
+            if (prevAlpha !== null) {
+                const alphaDiff = getShortestRotation(prevAlpha, alpha);
+                accumulatedAlpha += alphaDiff;
+            } else {
+                accumulatedAlpha = alpha;
+            }
+            prevAlpha = alpha;
+
+            smoothedAlpha = THREE.MathUtils.lerp(smoothedAlpha, accumulatedAlpha, 0.1);
+            smoothedBeta = THREE.MathUtils.lerp(smoothedBeta, beta, 0.1);
+
+            const alphaRad = THREE.MathUtils.degToRad(smoothedAlpha - 90);
+            const betaRad = THREE.MathUtils.degToRad(smoothedBeta - 90);
+
+            const quaternionYaw = new THREE.Quaternion();
+            quaternionYaw.setFromAxisAngle(new THREE.Vector3(0, 1, 0), alphaRad);
+
+            const quaternionPitch = new THREE.Quaternion();
+            quaternionPitch.setFromAxisAngle(new THREE.Vector3(1, 0, 0), betaRad);
+
+            camera.quaternion.copy(quaternionYaw).multiply(quaternionPitch);
+
+            // Get current time and date
+            const now = new Date();
+            const timeString = now.toLocaleTimeString();
+            const dateString = now.toLocaleDateString();
+
+            orientationDiv.innerHTML = `
+                ${timeString}<br>
+                ${dateString}<br> 
+                8° ⛅️
+            `;
+        };
+
+        // Initialize voice recognition when the page loads
+        window.addEventListener('load', () => {
+            initVoiceRecognition();
+        });
+
+        window.addEventListener('deviceorientation', onDeviceOrientation, true);
+
+        const animate = function () {
+            requestAnimationFrame(animate);
+            animateCats();
+            renderer.render(scene, camera);
+        };
+
+        animate();
+    </script>
+</head>
+<body>
+</body>
 </html>
